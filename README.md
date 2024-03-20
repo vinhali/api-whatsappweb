@@ -59,6 +59,8 @@ The server will start running on `http://localhost:5000`. Access the Swagger doc
 
 ## API Endpoints
 
+> ⚠️ **Warning:** To use the application, it is important to execute the /mapping route beforehand, after scanning the QRCode.
+
 ### Authentication
 
 This API uses HTTP Basic Authentication to secure its endpoints. Use the username and password defined in your `.env` file to authenticate requests.
