@@ -4,6 +4,15 @@
 
 This API simulates the interface between the user and WhatsApp Web, enabling programmatic interaction with WhatsApp. It provides functionalities such as sending messages, receiving messages, and intercepting new messages. This documentation covers the setup, available endpoints, and usage examples.
 
+### Demo Live
+
+<img src="docs/demo.gif" style="width:100%; max-width:600px;">
+
+### Actions
+
+<img src="docs/actions.png" style="max-height:300px;; max-width:300px;">
+
+
 ## Getting Started
 
 ### Prerequisites
