@@ -8,11 +8,6 @@ This API simulates the interface between the user and WhatsApp Web, enabling pro
 
 <img src="docs/demo.gif" style="width:100%; max-width:600px;">
 
-### Actions
-
-<img src="docs/actions.png" style="max-height:300px;; max-width:300px;">
-
-
 ## Getting Started
 
 ### Prerequisites
