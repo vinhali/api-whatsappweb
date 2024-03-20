@@ -22,7 +22,7 @@ git clone <repository-url>
 2. Navigate into the cloned repository.
 
 ```bash
-cd my-api
+cd api-whatsappweb
 ```
 
 3. Install the necessary dependencies.
