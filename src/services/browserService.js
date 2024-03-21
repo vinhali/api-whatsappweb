@@ -21,7 +21,7 @@ async function initBrowser(token) {
     }
     if (!browsers[token]) {
         browsers[token] = await puppeteer.launch({
-            headless: false,
+            headless: true,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',

@@ -119,6 +119,12 @@ The API structure is organized into several directories under `/src`:
 
 API documentation is configured in `swaggerConfig.js`. It uses Swagger to define and document the API endpoints.
 
+### Docker build and Run
+
+docker build -t api-whatsappweb . 
+
+docker run -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=123 api-whatsappweb
+
 ## Contributing
 
 Contributions to improve the API are welcome. Please follow the standard fork and pull request workflow.
