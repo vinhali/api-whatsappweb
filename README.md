@@ -121,9 +121,13 @@ API documentation is configured in `swaggerConfig.js`. It uses Swagger to define
 
 ### Docker build and Run
 
-`docker build -t api-whatsappweb .`
+```bash
+docker build -t api-whatsappweb .
+```
 
-`docker run -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=123 api-whatsappweb`
+```bash
+docker run -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=123 api-whatsappweb
+```
 
 ## Contributing
 
