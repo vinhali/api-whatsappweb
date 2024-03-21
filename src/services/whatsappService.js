@@ -59,9 +59,7 @@ async function getContacts(token, contactName) {
     console.log('GET call received at /contacts');
     const { browser, page } = await browserService.createPage(token, `https://web.whatsapp.com`);
     try {
-        await page.screenshot({ path: '1.png', clip: { x: 0, y: 0, width: 1000, height: 1000 } })
         await sleep(15);
-        await page.screenshot({ path: '2.png', clip: { x: 0, y: 0, width: 1000, height: 1000 } })
         await page.click('span[data-icon="new-chat-outline"]');
         await sleep(5);
         await page.evaluate((name) => {
