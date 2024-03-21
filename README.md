@@ -119,7 +119,9 @@ The API structure is organized into several directories under `/src`:
 
 API documentation is configured in `swaggerConfig.js`. It uses Swagger to define and document the API endpoints.
 
-### Docker build and Run
+## Docker
+
+### Creating a image
 
 ```bash
 docker build -t api-whatsappweb .
@@ -127,6 +129,39 @@ docker build -t api-whatsappweb .
 
 ```bash
 docker run -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=123 api-whatsappweb
+```
+
+### Screen Export Setup on Windows with VcXsrv
+
+#### Installing VcXsrv
+
+Choose "Multiple windows" and set the "Display number" to 0.
+On the next screen, select "Start no client".
+On the extra options configuration screen, check "Disable access control".
+Complete the configuration and start the X server.
+
+#### Setting Up in PowerShell
+
+```bash
+set DISPLAY=localhost:0.0
+```
+
+#### Creating the Container
+
+```bash
+docker run -d -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=dqm@50Vnc -e DISPLAY=host.docker.internal:0.0 api-whatsappweb
+```
+
+#### Executing Commands in the Container
+
+```bash
+docker exec -it <image-id> /bin/sh
+```
+
+#### Testing with a Command
+
+```bash
+xeyes
 ```
 
 ## Contributing

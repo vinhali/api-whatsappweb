@@ -2,6 +2,17 @@ FROM alpine:3.19.1
 
 RUN apk add --no-cache nodejs npm python3 make g++ chromium nss freetype freetype-dev harfbuzz ca-certificates ttf-freefont
 
+RUN apk add --no-cache \
+    xauth \
+    libx11 \
+    libxrender \
+    libxext \
+    libxi \
+    libxtst \
+    libxrandr \
+    alsa-lib \
+    xeyes
+
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
