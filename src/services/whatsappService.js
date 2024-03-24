@@ -54,54 +54,33 @@ async function terminateSession(token) {
  * @param {string} token Session identifier.
  * @returns {Array<Object>|Array<string>} Contacts as an array of objects or strings.
  */
-
 async function getContacts(token, contactName) {
     console.log('GET call received at /contacts');
     const { browser, page } = await browserService.createPage(token, `https://web.whatsapp.com`);
     try {
         await sleep(15);
+        await page.waitForSelector('span[data-icon="new-chat-outline"]');
         await page.click('span[data-icon="new-chat-outline"]');
-        await sleep(5);
-        await page.evaluate((name) => {
-            return new Promise((resolve, reject) => {
-                const scrollableElement = document.querySelector('.g0rxnol2.g0rxnol2.thghmljt.p357zi0d.rjo8vgbg.ggj6brxn.f8m0rgwh.gfz4du6o.ag5g9lrv.bs7a17vp.ov67bkzj');
-                if (!scrollableElement) {
-                    reject('Scrolling element not found');
-                    return;
-                }
-                const searchString = name;
-                let totalHeight = 0;
-                const timer = setInterval(() => {
-                    const previousHeight = totalHeight;
-                    scrollableElement.scrollBy(0, 100);
-                    totalHeight += 100;
-                    if (scrollableElement.innerText.includes(searchString)) {
-                        clearInterval(timer);
-                        resolve();
-                    } else if (totalHeight >= scrollableElement.scrollHeight && previousHeight === scrollableElement.scrollHeight) {
-                        clearInterval(timer);
-                        reject('Not found Contact Name');
-                    }
-                    scrollableElement.scrollTop = totalHeight;
-                }, 100);
-            });
-        }, contactName);
+        await page.waitForSelector('p.selectable-text.copyable-text.iq0m558w.g0rxnol2');
+        await page.type('p.selectable-text.copyable-text.iq0m558w.g0rxnol2', contactName);
         try {
+            await page.waitForSelector(`span[title="${contactName}"]`);
+            await page.hover(`span[title="${contactName}"]`);
             await page.click(`span[title="${contactName}"]`);
-            console.log(`Clicked on ${contactName} without space`);
         } catch (error) {
             console.log(`Failed to click on ${contactName} without space. Trying with space...`);
             try {
+                await page.waitForSelector(`span[title="${contactName} "]`);
+                await page.hover(`span[title="${contactName} "]`);
                 await page.click(`span[title="${contactName} "]`);
-                console.log(`Clicked on ${contactName} with an extra space`);
             } catch (error) {
                 console.log(`We couldn't identify what's in the contact string, it could be that the contact has emojis, please validate!`);
                 return false;
             }
-        }
-        await sleep(5);               
+        }             
+        await page.waitForSelector('div[contenteditable="true"][title="Type a message"]');
+        await page.hover('div[contenteditable="true"][title="Type a message"]');    
         await page.click('div[contenteditable="true"][title="Type a message"]');
-        await sleep(2);
         await generalUtil.clickSecondMenuAndContactInfo(page);
         await sleep(2);
         const phoneNumber = await page.evaluate(() => {
@@ -163,24 +142,28 @@ async function getNewMessages(token, totalChats) {
         }
         let groupsName = [];
         if (fs.existsSync(groupsNameFilePath)) {
-            const rawData = fileUtil.readJsonFile(groupsNameFilePath);
-            try {
-                groupsName = JSON.parse(rawData);
-            } catch {
-                groupsName = [];
-            }
+            groupsName = fileUtil.readJsonFile(groupsNameFilePath);
         }
         const chatsDataWithId = chatsData.reduce((acc, chat) => {
+            console.error(`Searching for contact details: ${chat.chatName}`);
             if (!groupsName.includes(chat.chatName.trim().replace(emojiRegex, ''))) {
                 let chatId = contactsData[chat.chatName.trim().replace(emojiRegex, '')];
-                if (chatId || generalUtil.isPhoneNumber(chat.chatName)) {
+                if (chatId) {
+                    console.error(`chatId found for`);
                     acc.push({
                         chatId: chatId,
                         lastMessageTime: chat.lastMessageTime,
                         lastMessage: chat.lastMessage
                     });
+                } else if (generalUtil.isPhoneNumber(chat.chatName)) {
+                    console.error(`Chat name is already a phone number`);
+                    acc.push({
+                        chatId: chat.chatName,
+                        lastMessageTime: chat.lastMessageTime,
+                        lastMessage: chat.lastMessage
+                    });
                 } else {
-                    console.error(`No chatId found for ${chat.chatName}`);
+                    console.error(`No chatId found, added with the name...`);
                     acc.push({
                         chatId: chat.chatName,
                         lastMessageTime: chat.lastMessageTime,
@@ -188,6 +171,8 @@ async function getNewMessages(token, totalChats) {
                         alertMessage: "Please use the /mapping route to map the new contact"
                     });
                 }
+            } else {
+                console.log(`That's a group, skipping...`);
             }
             return acc;
         }, []);
@@ -309,11 +294,8 @@ async function mapGroups(token) {
         await sleep(2);
         await page.click('span[data-icon="group"]');
         await sleep(2);
-
         const groupNames = await generalUtil.autoScrollAndCollectContacts(page, '#pane-side');
-
         fs.writeFileSync(groupsNameFilePath, JSON.stringify(groupNames, null, 2), 'utf8');
-
         console.log('groupsName.json file was saved successfully');
         await page.close();
         return true;
@@ -338,11 +320,8 @@ async function mapContacts(token) {
         await sleep(2);
         await page.click('span[data-icon="contacts"]');
         await sleep(2);
-
         const contactsName = await generalUtil.autoScrollAndCollectContacts(page, '#pane-side');
-
         fs.writeFileSync(contactsNameFilePath, JSON.stringify(contactsName, null, 2), 'utf8');
-
         console.log('contactsName.json file was saved successfully');
         await page.close();
         return true;
@@ -362,7 +341,6 @@ async function mapPhoneNumbers(token) {
     try {
         contactsNames = fileUtil.readJsonFile(contactsNameFilePath);
         contactsData = fileUtil.readJsonFile(contactsFilePath);
-
         for (let name of contactsNames) {
             if (!contactsData[name]) {
                 const phoneNumber = await getContacts(token, name);
@@ -372,7 +350,6 @@ async function mapPhoneNumbers(token) {
                 console.log(`Name: ${name} already exists in contactsData`);
             }
         }
-
         console.log('contactsData.json file was saved successfully');
         return true;
     } catch (error) {

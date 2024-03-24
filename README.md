@@ -82,6 +82,17 @@ This API uses HTTP Basic Authentication to secure its endpoints. Use the usernam
 
 - **POST `/api/whatsapp/contacts`**: Retrieves the phone number for a given contact name. Requires the session token and contact name in the request body.
 
+## Average response time 
+
+| Endpoint        | HTTP Method | Mean Time         |
+|-----------------|-------------|-------------------|
+| `/message`      | GET         | 9s                |
+| `/message`      | POST        | 23s               |
+| `/new_messages` | POST        | 18s               |
+| `/contacts`     | POST        | 20s               |
+| `/terminate`    | POST        | 2s                |
+| `/mapping`      | POST        | Varies            |
+
 ## Usage Examples
 
 Below are examples of how to use the API endpoints:
@@ -128,7 +139,7 @@ docker build -t api-whatsappweb .
 ```
 
 ```bash
-docker run -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=123 api-whatsappweb
+docker run -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=secret api-whatsappweb
 ```
 
 ### Screen Export Setup on Windows with VcXsrv
@@ -149,7 +160,7 @@ set DISPLAY=localhost:0.0
 #### Creating the Container
 
 ```bash
-docker run -d -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=dqm@50Vnc -e DISPLAY=host.docker.internal:0.0 api-whatsappweb
+docker run -d -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=secret -e DISPLAY=host.docker.internal:0.0 api-whatsappweb
 ```
 
 #### Executing Commands in the Container

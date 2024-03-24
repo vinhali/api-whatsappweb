@@ -17,8 +17,8 @@ async function sleep(seconds) {
  * Check Phone Number
  */
 function isPhoneNumber(chatName) {
-    const phonePattern = /^\+?\d{10,15}$/;
-    return phonePattern.test(chatName.replace(/\s/g, '').replace(/-/g, ''));
+    const phonePattern = /^\+55\s\d{2}\s\d{4,5}-\d{4}$/;
+    return phonePattern.test(chatName);
 }
 
 /**
