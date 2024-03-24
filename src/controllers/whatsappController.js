@@ -7,10 +7,10 @@ const basicAuthMiddleware = require('../middlewares/authMiddleware');
 const tokenUtils = require('../utils/tokenUtils');
 const fs = require('fs');
 const path = require('path');
-const tokenDataPath = path.join(__dirname, '..', 'data', 'tokenData.json');
+const { paths } = require('../services/config');
 
 router.use((req, res, next) => {
-    if (fs.existsSync(tokenDataPath)) {
+    if (fs.existsSync(paths.TOKEN_DATA_PATH)) {
         req.tokenData = tokenUtils.readTokenData();
     } else {
         req.tokenData = {};

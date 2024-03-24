@@ -13,7 +13,7 @@
         |-- tokenUtil.js
     |-- swaggerConfig.js
     |-- app.js
-    |-- .env
+|-- .env
 |-- package.json
 |-- package-lock.json
 |-- README.md

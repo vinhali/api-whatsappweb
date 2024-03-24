@@ -3,8 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { browserService } = require('../services/browserService');
 const tokenUtils = require('../utils/tokenUtils');
-
-const tokenDataPath = path.join(__dirname, '..', 'data', 'tokenData.json');
+const { paths, selectors } = require('../services/config');
 
 /**
  * Waits for a QR Code to appear and checks if it has been scanned within a set interval.
@@ -16,12 +15,12 @@ const tokenDataPath = path.join(__dirname, '..', 'data', 'tokenData.json');
 async function validateQRCodeScanning(page, browser, token) {
     let isQRCodeScanned = false;
 
-    if (fs.existsSync(tokenDataPath)) {
+    if (fs.existsSync(paths.TOKEN_DATA_PATH)) {
         tokenData = tokenUtils.readTokenData();
     }
 
     const checkQRCodeScanned = async () => {
-        const qrCodeElement = await page.$('canvas[aria-label="Scan me!"]');
+        const qrCodeElement = await page.$(selectors.QR_CODE_SELECTOR);
         return !qrCodeElement;
     };
 

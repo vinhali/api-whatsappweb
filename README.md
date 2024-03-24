@@ -45,6 +45,7 @@ npm install
 PORT=5000
 BASIC_AUTH_USERNAME=admin
 BASIC_AUTH_PASSWORD=secret
+HEADLESS_MODE=true
 ```
 
 ### Running the API
@@ -131,6 +132,8 @@ The API structure is organized into several directories under `/src`:
 API documentation is configured in `swaggerConfig.js`. It uses Swagger to define and document the API endpoints.
 
 ## Docker
+
+[Image Pull](https://hub.docker.com/r/luisvinhali/api-whatsappweb)
 
 ### Creating a image
 

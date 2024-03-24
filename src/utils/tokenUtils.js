@@ -1,8 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-
-const tokenDataPath = path.join(__dirname, '..', 'data', 'tokenData.json');
+const { paths } = require('../services/config');
 
 /**
  * Generates a unique token using secure cryptography.
@@ -19,7 +18,7 @@ function generateToken() {
  */
 function saveTokenDataToFile(tokenData) {
     try {
-        fs.writeFileSync(tokenDataPath, JSON.stringify(tokenData, null, 2), 'utf-8');
+        fs.writeFileSync(paths.TOKEN_DATA_PATH, JSON.stringify(tokenData, null, 2), 'utf-8');
         console.log("Token data successfully saved.");
     } catch (error) {
         console.error("Failed to save token data:", error);
@@ -32,8 +31,8 @@ function saveTokenDataToFile(tokenData) {
  */
 const readTokenData = () => {
     try {
-        if (fs.existsSync(tokenDataPath)) {
-            const data = fs.readFileSync(tokenDataPath, 'utf-8');
+        if (fs.existsSync(paths.TOKEN_DATA_PATH, JSON)) {
+            const data = fs.readFileSync(paths.TOKEN_DATA_PATH, JSON, 'utf-8');
             if (data) {
                 return JSON.parse(data);
             }
@@ -66,7 +65,7 @@ function removeToken(token) {
     if (tokenData.hasOwnProperty(token)) {
         delete tokenData[token];
         try {
-            fs.writeFileSync(tokenDataPath, JSON.stringify(tokenData, null, 2), 'utf-8');
+            fs.writeFileSync(paths.TOKEN_DATA_PATH, JSON, JSON.stringify(tokenData, null, 2), 'utf-8');
             console.log(`Token removed: ${token}`);
         } catch (error) {
             console.error(`Failed to remove token: ${token}. Error: ${error}`);

@@ -5,13 +5,7 @@ const browserService = require('./browserService');
 const tokenUtils = require('../utils/tokenUtils');
 const generalUtil = require('../utils/generalUtil');
 const fileUtil = require('../utils/fileUtil');
-const { error } = require('console');
-
-const contactsNameFilePath = path.join(__dirname, '..', 'data', 'contactsName.json');
-const contactsFilePath = path.join(__dirname, '..', 'data', 'contactsData.json');
-const tokenDataPath = path.join(__dirname, '..', 'data', 'tokenData.json');
-const groupsNameFilePath = path.join(__dirname, '..', 'data', 'groupsName.json');
-const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
+const { vars, paths, selectors, getContactMenuBarSelector  } = require('./config');
 
 let contactsData = {};
 let chatMessagesHistory = {};
@@ -29,10 +23,9 @@ async function sleep(seconds) {
  */
 async function getQRCode() {
     const token = tokenUtils.generateToken();
-    const { browser, page } = await browserService.createPage(token, `https://web.whatsapp.com`);
-    const QRCodeSelector = 'canvas[aria-label="Scan me!"]';
-    await page.waitForSelector(QRCodeSelector);
-    const qrCodeCanvas = await page.$(QRCodeSelector);
+    const { browser, page } = await browserService.createPage(token, selectors.WHATSAPP_URL);
+    await page.waitForSelector(selectors.QR_CODE_SELECTOR);
+    const qrCodeCanvas = await page.$(selectors.QR_CODE_SELECTOR);
     const qrCodeImageBuffer = await qrCodeCanvas.screenshot({ encoding: 'binary', type: 'png', omitBackground: true });
     return { qrCodeImageBuffer, page, token, browser };
 }
@@ -43,7 +36,7 @@ async function getQRCode() {
  */
 async function terminateSession(token) {
     console.log('GET call received at /terminate');
-    if (fs.existsSync(tokenDataPath)) {
+    if (fs.existsSync(paths.TOKEN_DATA_PATH)) {
         tokenData = tokenUtils.readTokenData();
     }
     browserService.forceTerminateBrowserSession(tokenData[token].pid, token);
@@ -58,37 +51,32 @@ async function getContacts(token, contactName) {
     console.log('GET call received at /contacts');
     const { browser, page } = await browserService.createPage(token, `https://web.whatsapp.com`);
     try {
-        await sleep(15);
-        await page.waitForSelector('span[data-icon="new-chat-outline"]');
-        await page.click('span[data-icon="new-chat-outline"]');
-        await page.waitForSelector('p.selectable-text.copyable-text.iq0m558w.g0rxnol2');
-        await page.type('p.selectable-text.copyable-text.iq0m558w.g0rxnol2', contactName);
+        await sleep(5);
+        await page.waitForSelector(selectors.CONTACT_OPEN_NEW_CHAT, {visible: true});
+        await page.click(selectors.CONTACT_OPEN_NEW_CHAT);
+        await page.waitForSelector(selectors.CONTACT_NAME_SEARCH);
+        await page.type(selectors.CONTACT_NAME_SEARCH, contactName);
         try {
-            await page.waitForSelector(`span[title="${contactName}"]`);
-            await page.hover(`span[title="${contactName}"]`);
-            await page.click(`span[title="${contactName}"]`);
+            const contactMenuBarSelector = getContactMenuBarSelector(contactName, false);
+            await page.waitForSelector(contactMenuBarSelector, {visible: true});
+            await page.hover(contactMenuBarSelector);
+            await page.click(contactMenuBarSelector);
         } catch (error) {
             console.log(`Failed to click on ${contactName} without space. Trying with space...`);
-            try {
-                await page.waitForSelector(`span[title="${contactName} "]`);
-                await page.hover(`span[title="${contactName} "]`);
-                await page.click(`span[title="${contactName} "]`);
-            } catch (error) {
-                console.log(`We couldn't identify what's in the contact string, it could be that the contact has emojis, please validate!`);
-                return false;
-            }
-        }             
-        await page.waitForSelector('div[contenteditable="true"][title="Type a message"]');
-        await page.hover('div[contenteditable="true"][title="Type a message"]');    
-        await page.click('div[contenteditable="true"][title="Type a message"]');
-        await generalUtil.clickSecondMenuAndContactInfo(page);
-        await sleep(2);
-        const phoneNumber = await page.evaluate(() => {
-            const phoneSpan = document.querySelector('div.a4ywakfo.qt60bha0 span._11JPr.selectable-text.copyable-text span.enbbiyaj.e1gr2w1z.hp667wtd');
+            const contactMenuBarSelector = getContactMenuBarSelector(contactName, true);
+            await page.waitForSelector(contactMenuBarSelector, {visible: true});
+            await page.hover(contactMenuBarSelector);
+            await page.click(contactMenuBarSelector);
+        }
+        await sleep(1);
+        await generalUtil.clickSecondMenuAndContactInfo(page, selectors);
+        await sleep(1);
+        const phoneNumber = await page.evaluate((selectors) => {
+            const phoneSpan = document.querySelector(selectors.CONTACT_FIELD_PHONE_NUMBER);
             if (phoneSpan && phoneSpan.innerText.includes('+55')) {
                 return phoneSpan.innerText;
             } else {
-                const spans = document.querySelectorAll('span[aria-label], span.selectable-text.copyable-text');
+                const spans = document.querySelectorAll(selectors.CONTACT_PHONE_NUMBER);
                 let targetNumber = null;
                 spans.forEach(span => {
                     const textContent = span.innerText || span.textContent;
@@ -98,7 +86,7 @@ async function getContacts(token, contactName) {
                 });
                 return targetNumber;
             }
-        });
+        }, selectors);
         console.log('Phone number successfully found:', contactName);
         await page.close();
         return phoneNumber;
@@ -116,17 +104,17 @@ async function getContacts(token, contactName) {
  */
 async function getNewMessages(token, totalChats) {
     console.log('GET call received at /new_messages');
-    const { browser, page } = await browserService.createPage(token, `https://web.whatsapp.com`);
+    const { browser, page } = await browserService.createPage(token, selectors.WHATSAPP_URL);
     try {
-        await sleep(15);
-        const chatsData = await page.evaluate((totalChats) => {
+        await sleep(5);
+        const chatsData = await page.evaluate(({CHATS_ROW, CHAT_NAME, CHAT_TIME_MESASGE, CHAT_LAST_MESSAGE, CHAT_STATUS_CHECK_MESSAGE, CHAT_STATUS_DOUBLE_CHECK_MESSAGE}, totalChats) => {
             const chats = [];
-            document.querySelectorAll('[role="row"]').forEach(chatElement => { 
-                const nameElement = chatElement.querySelector('[dir="auto"]._11JPr');
-                const lastMessageTimeElement = chatElement.querySelector('.aprpv14t');
-                const lastMessageElement = chatElement.querySelector('[dir="ltr"]._11JPr');
-                const statusCheckIcon = chatElement.querySelector('[data-icon="status-check"]');
-                const statusDblCheckIcon = chatElement.querySelector('[data-icon="status-dblcheck"]');
+            document.querySelectorAll(CHATS_ROW).forEach(chatElement => {
+                const nameElement = chatElement.querySelector(CHAT_NAME);
+                const lastMessageTimeElement = chatElement.querySelector(CHAT_TIME_MESASGE);
+                const lastMessageElement = chatElement.querySelector(CHAT_LAST_MESSAGE);
+                const statusCheckIcon = chatElement.querySelector(CHAT_STATUS_CHECK_MESSAGE);
+                const statusDblCheckIcon = chatElement.querySelector(CHAT_STATUS_DOUBLE_CHECK_MESSAGE);
                 if (nameElement && lastMessageTimeElement && (!statusCheckIcon && !statusDblCheckIcon)) {
                     const chatName = nameElement.innerText;
                     const lastMessageTime = lastMessageTimeElement.innerText;
@@ -135,19 +123,19 @@ async function getNewMessages(token, totalChats) {
                 }
             });
             return chats.slice(0, totalChats);
-        }, totalChats);
+        }, selectors, totalChats);
         let contactsData = {};
-        if (fs.existsSync(contactsFilePath)) {
-            contactsData = fileUtil.readJsonFile(contactsFilePath);
+        if (fs.existsSync(paths.CONTACTS_NUMBERS_PATH)) {
+            contactsData = fileUtil.readJsonFile(paths.CONTACTS_NUMBERS_PATH);
         }
         let groupsName = [];
-        if (fs.existsSync(groupsNameFilePath)) {
-            groupsName = fileUtil.readJsonFile(groupsNameFilePath);
+        if (fs.existsSync(paths.GROUPS_NAME_PATH)) {
+            groupsName = fileUtil.readJsonFile(paths.GROUPS_NAME_PATH);
         }
         const chatsDataWithId = chatsData.reduce((acc, chat) => {
             console.error(`Searching for contact details: ${chat.chatName}`);
-            if (!groupsName.includes(chat.chatName.trim().replace(emojiRegex, ''))) {
-                let chatId = contactsData[chat.chatName.trim().replace(emojiRegex, '')];
+            if (!groupsName.includes(chat.chatName.trim().replace(vars.EMOJI_REGEX, ''))) {
+                let chatId = contactsData[chat.chatName.trim().replace(vars.EMOJI_REGEX, '')];
                 if (chatId) {
                     console.error(`chatId found for`);
                     acc.push({
@@ -192,16 +180,16 @@ async function getNewMessages(token, totalChats) {
  */
 async function sendMessage(token, chatId, message) {
     console.log('POST call received at /message');
-    const { browser, page } = await browserService.createPage(token, `https://web.whatsapp.com/send/?phone=${chatId}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`);
+    const { browser, page } = await browserService.createPage(token, `${selectors.WHATSAPP_URL}/send/?phone=${chatId}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`);
     try {
         let attempt = 0;
         let messageSent = false;
         const maxAttempts = 12;
         while (attempt < maxAttempts && !messageSent) {
             try {
-                await page.click('span[data-icon="send"]');
+                await page.click(selectors.POST_SEND_MESSAGE);
                 messageSent = true;
-                await sleep(5);
+                await sleep(2);
                 await page.close();
                 console.log('Message sent successfully');
                 break;
@@ -226,46 +214,39 @@ async function sendMessage(token, chatId, message) {
  * Get a message to a specific contact.
  * @param {string} token Session identifier.
  * @param {string} chatId Identifier for the contact or group.
- *  * @param {string} visibleName Profile Name.
+ * @param {string} visibleName Profile Name.
  */
 async function getMessage(token, chatId, visibleName) {
     console.log('GET call received at /message');
-    const { browser, page } = await browserService.createPage(token, `https://web.whatsapp.com/send/?phone=${chatId}&type=phone_number&app_absent=0`);
+    const { page } = await browserService.createPage(token, `${selectors.WHATSAPP_URL}/send/?phone=${chatId}&type=phone_number&app_absent=0`);
     let attempt = 0;
     let getMessage = false;
     const maxAttempts = 12;
     while (attempt < maxAttempts && !getMessage) {
         try {
-            await page.waitForSelector('div[contenteditable="true"][role="textbox"][title="Type a message"]', { visible: true });
+            await page.waitForSelector(selectors.GET_MESSAGE_TYPE_BOX, { visible: true });
             await sleep(5);
-            const messages = await page.evaluate((visibleName) => {
-                return Array.from(document.querySelectorAll('div.copyable-text'))
-                    .map(el => {
-                        const prePlainText = el.getAttribute('data-pre-plain-text');
-                        const text = el.innerText;
-                        if (!prePlainText || prePlainText.includes(visibleName)) {
-                            return null;
-                        }
-                        return text.replace(prePlainText, '').trim();
-                    })
-                    .filter(Boolean);
-            }, visibleName);
+            const messages = await page.evaluate(({ GET_MESSAGE_FIELD_MESSAGES, GET_MESSAGE_TEXT }, visibleName) => {
+                const messageElements = Array.from(document.querySelectorAll(GET_MESSAGE_FIELD_MESSAGES));
+                return messageElements.map(el => {
+                    const prePlainText = el.getAttribute(GET_MESSAGE_TEXT);
+                    const text = el.innerText;
+                    if (!prePlainText || prePlainText.includes(visibleName)) {
+                        return null;
+                    }
+                    return text.replace(prePlainText, '').trim();
+                }).filter(Boolean);
+            }, {GET_MESSAGE_FIELD_MESSAGES: selectors.GET_MESSAGE_FIELD_MESSAGES, GET_MESSAGE_TEXT: selectors.GET_MESSAGE_TEXT}, visibleName);
             const historyExists = chatId in chatMessagesHistory;
             const newMessages = messages.filter(msg => !historyExists || !chatMessagesHistory[chatId].includes(msg));
-            newMessages.reverse();
-            await page.close();
             if (newMessages.length > 0) {
                 chatMessagesHistory[chatId] = (chatMessagesHistory[chatId] || []).concat(newMessages).slice(-30);
                 getMessage = true;
                 return { messages: newMessages };
             } else {
-                if (historyExists) {
-                    console.log('No new messages');
-                    getMessage = true;
-                    return { messages: [] };
-                } else {
-                    throw new Error('No messages found');
-                }
+                console.log(historyExists ? 'No new messages' : 'No messages found');
+                getMessage = true;
+                return { messages: [] };
             }
         } catch (error) {
             console.log('Attempting to retrieve messages again in 15 seconds');
@@ -274,7 +255,6 @@ async function getMessage(token, chatId, visibleName) {
         }
     }
     if (!getMessage) {
-        await page.close();
         throw new Error('Failed to get message after maximum attempts.');
     }
 }
@@ -286,16 +266,16 @@ async function getMessage(token, chatId, visibleName) {
  */
 async function mapGroups(token) {
     console.log('POST call received at /mapping by Groups');
-    const { browser, page } = await browserService.createPage(token, `https://web.whatsapp.com`);
+    const { browser, page } = await browserService.createPage(token, selectors.WHATSAPP_URL);
     try {
         await sleep(10);
         console.log('Mapping all groups in a buffer');
-        await page.click('span[data-icon="filter"]');
+        await page.click(selectors.MAP_FILTER_CHAT);
         await sleep(2);
-        await page.click('span[data-icon="group"]');
+        await page.click(selectors.MAP_FILTER_SELECT_GROUPS);
         await sleep(2);
-        const groupNames = await generalUtil.autoScrollAndCollectContacts(page, '#pane-side');
-        fs.writeFileSync(groupsNameFilePath, JSON.stringify(groupNames, null, 2), 'utf8');
+        const groupNames = await generalUtil.autoScrollAndCollectContacts(page, selectors.MAP_SCROLL, selectors.SCROLL_MAP);
+        fileUtil.writeJsonFile(paths.GROUPS_NAME_PATH, groupNames);
         console.log('groupsName.json file was saved successfully');
         await page.close();
         return true;
@@ -312,16 +292,16 @@ async function mapGroups(token) {
  */
 async function mapContacts(token) {
     console.log('POST call received at /mapping by Contacts');
-    const { browser, page } = await browserService.createPage(token, `https://web.whatsapp.com`);
+    const { browser, page } = await browserService.createPage(token, selectors.WHATSAPP_URL);
     try {
         await sleep(10);
         console.log('Mapping all contacts in a buffer');
-        await page.click('span[data-icon="filter"]');
+        await page.click(selectors.MAP_FILTER_CHAT);
         await sleep(2);
-        await page.click('span[data-icon="contacts"]');
+        await page.click(selectors.MAP_FILTER_SELECT_CONTACTS);
         await sleep(2);
-        const contactsName = await generalUtil.autoScrollAndCollectContacts(page, '#pane-side');
-        fs.writeFileSync(contactsNameFilePath, JSON.stringify(contactsName, null, 2), 'utf8');
+        const contactsName = await generalUtil.autoScrollAndCollectContacts(page, selectors.MAP_SCROLL, selectors.SCROLL_MAP);
+        fileUtil.writeJsonFile(paths.CONTACTS_NAME_PATH, contactsName);
         console.log('contactsName.json file was saved successfully');
         await page.close();
         return true;
@@ -339,15 +319,15 @@ async function mapContacts(token) {
 async function mapPhoneNumbers(token) {
     console.log('POST call received at /mapping by Phone Numbers');
     try {
-        contactsNames = fileUtil.readJsonFile(contactsNameFilePath);
-        contactsData = fileUtil.readJsonFile(contactsFilePath);
+        contactsNames = fileUtil.readJsonFile(paths.CONTACTS_NAME_PATH);
+        contactsData = fileUtil.readJsonFile(paths.CONTACTS_NUMBERS_PATH);
         for (let name of contactsNames) {
             if (!contactsData[name]) {
                 const phoneNumber = await getContacts(token, name);
                 contactsData[name] = phoneNumber;
-                fs.writeFileSync(contactsFilePath, JSON.stringify(contactsData, null, 2), 'utf8');
+                fileUtil.writeJsonFile(paths.CONTACTS_NUMBERS_PATH, contactsData);
             } else {
-                console.log(`Name: ${name} already exists in contactsData`);
+                console.log(`Contact Name ${name} already exists in contactsData`);
             }
         }
         console.log('contactsData.json file was saved successfully');

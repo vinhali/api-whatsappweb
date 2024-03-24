@@ -3,8 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const tokenUtils = require('../utils/tokenUtils');
 const generalUtils = require('../utils/generalUtil');
-
-const tokenDataPath = path.join(__dirname, '..', 'data', 'tokenData.json');
+const { vars, paths } = require('./config');
 
 let browsers = {};
 
@@ -14,14 +13,15 @@ let browsers = {};
  * @returns Returns a browser instance for the given token.
  */
 async function initBrowser(token) {
-    if (fs.existsSync(tokenDataPath)) {
+    generalUtils.reloadEnvVariables();
+    if (fs.existsSync(paths.TOKEN_DATA_PATH)) {
         tokenData = tokenUtils.readTokenData();
     } else {
         tokenData = {};
     }
     if (!browsers[token]) {
         browsers[token] = await puppeteer.launch({
-            headless: true,
+            headless: generalUtils.convertToBoolean(process.env.HEADLESS_MODE),
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -53,8 +53,8 @@ async function initBrowser(token) {
 async function createPage(token, msgUrl) {
     const browser = await initBrowser(token);
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36');
-    await page.goto(msgUrl, { waitUntil: 'networkidle2' });
+    await page.setUserAgent(vars.USER_AGENT);
+    await page.goto(msgUrl, { waitUntil: vars.WAIT_UNTIL });
     return { browser, page };
 }
 
