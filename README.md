@@ -135,14 +135,20 @@ API documentation is configured in `swaggerConfig.js`. It uses Swagger to define
 
 [Image Pull](https://hub.docker.com/r/luisvinhali/api-whatsappweb)
 
-### Creating a image
+### Creating a local image
 
 ```bash
 docker build -t api-whatsappweb .
 ```
 
 ```bash
-docker run -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=secret api-whatsappweb
+docker run -d --name api-whatsappweb -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=secret api-whatsappweb
+```
+
+### Creating a remote image
+
+```bash
+docker run -d --name api-whatsappweb -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=secret luisvinhali/api-whatsappweb:1.0
 ```
 
 ### Screen Export Setup on Windows with VcXsrv
@@ -163,7 +169,7 @@ set DISPLAY=localhost:0.0
 #### Creating the Container
 
 ```bash
-docker run -d -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=secret -e DISPLAY=host.docker.internal:0.0 api-whatsappweb
+docker run -d --name api-whatsappweb -p 5000:5000 -e PORT=5000 -e BASIC_AUTH_USERNAME=admin -e BASIC_AUTH_PASSWORD=secret -e DISPLAY=host.docker.internal:0.0 luisvinhali/api-whatsappweb:1.0
 ```
 
 #### Executing Commands in the Container
